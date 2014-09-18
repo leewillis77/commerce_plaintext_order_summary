@@ -1,4 +1,4 @@
-# Commerce Plaintext Order Summary Tokens
+# Drupal Commerce Plaintext Order Summary Tokens
 
 ## About this module
 Provides tokens that provide plaintext line item summaries suitable for use in order confirmation emails for Drupal Commerce.
