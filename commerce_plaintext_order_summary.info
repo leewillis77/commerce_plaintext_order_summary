@@ -1,0 +1,4 @@
+name = Commerce Plaintext Order Summary
+description = "Provides tokens containing plain text suitable line item summaries"
+core = "7.x"
+version = "7.x-1.0"

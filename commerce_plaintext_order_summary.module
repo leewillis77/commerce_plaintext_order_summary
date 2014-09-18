@@ -1,0 +1,149 @@
+<?php
+
+/**
+ * Copyright (c) 2014 Lee Willis. All rights reserved.
+ *
+ * Released under the GPL license
+ * http://www.opensource.org/licenses/gpl-license.php
+ *
+ * This is an add-on for Drupal Commerce
+ * http://drupal.org/project/commerce
+ *
+ * **********************************************************************
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * **********************************************************************
+ */
+
+/**
+* Implements hook_token_info_alter().
+*/
+function commerce_plaintext_order_summary_token_info_alter(&$info) {
+  $info['tokens']['commerce-order']['plaintext-product-line-items'] = array(
+    'name' => t("Plain-text summary of an order's product line items."),
+    'description' => t('Provides a plain-text summary of the product line items on a given order.'),
+  );
+  $info['tokens']['commerce-order']['plaintext-shipping-line-items'] = array(
+    'name' => t("Plain-text summary of an order's shipping line items."),
+    'description' => t('Provides a plain-text summary of the shipping line items on a given order.'),
+  );
+  // @TODO - support dor discount codes?
+}
+
+/**
+* Implements hook_tokens().
+*/
+function commerce_plaintext_order_summary_tokens($type, $tokens, array $data = array(), array $options = array()) {
+
+  $sanitize     = !empty($options['sanitize']);
+  $replacements = array();
+
+  if ($type == 'commerce-order' && !empty($data['commerce-order'])) {
+    foreach ($tokens as $name => $original) {
+      switch ($name) {
+        case 'plaintext-product-line-items':
+          $replacements[$original] = _commerce_plaintext_order_summary_render_product_line_items($data['commerce-order']);
+          break;
+        case 'plaintext-shipping-line-items':
+          $replacements[$original] = _commerce_plaintext_order_summary_render_shipping_line_items($data['commerce-order']);
+          break;
+      }
+    }
+  }
+
+  return $replacements;
+}
+
+/**
+ * Return an array of line item IDs from the order object.
+ *
+ * @param Object  $order  A Commerce Order object.
+ * @return                An array of Commerce Line Item IDs
+ */
+function _commerce_plaintext_order_summary_get_line_items_from_order($order) {
+  return array_map(
+    function ($val) {
+      return $val['line_item_id'];
+    },
+    $order->commerce_line_items[LANGUAGE_NONE]
+  );
+}
+
+/**
+ * Render the output for the product line items for an order
+ *
+ * @param   Object $order  A Commerce Order object.
+ * @return  String         The plain-text output for the product line items on
+ *                         the order.
+ */
+function _commerce_plaintext_order_summary_render_product_line_items($commerce_order) {
+  $line_output   = array();
+  $line_item_ids = _commerce_plaintext_order_summary_get_line_items_from_order($commerce_order);
+  $product_items = commerce_line_item_load_multiple(
+    $line_item_ids,
+    array(
+      'type' => 'product'
+    )
+  );
+  foreach($product_items as $product_item) {
+    $product_id      = $product_item->commerce_product[LANGUAGE_NONE][0]['product_id'];
+    $product         = commerce_product_load($product_id);
+    $line_item_label = $product_item->line_item_label;
+    $product_name    = isset($product->title) ? $product->title : t('Unknown product');
+    $quantity        = $product_item->quantity;
+    $currency        = $product_item->commerce_total[LANGUAGE_NONE][0]['currency_code'];
+    $price           = $product_item->commerce_total[LANGUAGE_NONE][0]['amount'] / 100;
+    $line_output[]   = t(
+      '@product_name - @line_item_label (Qty: @quantity) : @currency@price',
+      array(
+        '@product_name'    => $product_name,
+        '@line_item_label' => $line_item_label,
+        '@quantity'        => $quantity,
+        '@currency'        => $currency,
+        '@price'           => $price,
+      )
+    );
+  }
+  return implode(PHP_EOL, $line_output);
+}
+
+/**
+ * Render the output for the shipping line items for an order
+ *
+ * @param   Object $order  A Commerce Order object.
+ * @return  String         The plain-text output for the shipping line items on
+ *                         the order.
+ */
+function _commerce_plaintext_order_summary_render_shipping_line_items($commerce_order) {
+  $line_output    = array();
+  $line_item_ids  = _commerce_plaintext_order_summary_get_line_items_from_order($commerce_order);
+  $shipping_items = commerce_line_item_load_multiple(
+    $line_item_ids,
+    array(
+      'type' => 'shipping'
+    )
+  );
+  foreach($shipping_items as $shipping_item) {
+    $line_item_label = $shipping_item->line_item_label;
+    $quantity        = $shipping_item->quantity;
+    $currency        = $shipping_item->commerce_total[LANGUAGE_NONE][0]['currency_code'];
+    $price           = $shipping_item->commerce_total[LANGUAGE_NONE][0]['amount'] / 100;
+    $line_output[]   = t(
+      '@line_item_label (Qty: @quantity) : @currency@price',
+      array(
+        '@line_item_label' => $line_item_label,
+        '@quantity'        => $quantity,
+        '@currency'        => $currency,
+        '@price'           => $price,
+      )
+    );
+  }
+  return implode(PHP_EOL, $line_output);
+}
