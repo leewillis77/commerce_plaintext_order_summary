@@ -101,13 +101,15 @@ function _commerce_plaintext_order_summary_render_product_line_items($commerce_o
     $currency        = $product_item->commerce_total[LANGUAGE_NONE][0]['currency_code'];
     $price           = $product_item->commerce_total[LANGUAGE_NONE][0]['amount'] / 100;
     $line_output[]   = t(
-      '@product_name - @line_item_label (Qty: @quantity) : @currency@price',
+      '@product_name - @line_item_label (Qty: @intquantity) : @currency@price',
       array(
         '@product_name'    => $product_name,
         '@line_item_label' => $line_item_label,
         '@quantity'        => $quantity,
-        '@currency'        => $currency,
-        '@price'           => $price,
+        '@intquantity'     => (int) floor($quantity),
+        '@currency'        => commerce_currency_get_symbol($currency),
+        '@currencycode'    => $currency,
+        '@price'           => sprintf('%.2f', $price),
       )
     );
   }
@@ -136,12 +138,14 @@ function _commerce_plaintext_order_summary_render_shipping_line_items($commerce_
     $currency        = $shipping_item->commerce_total[LANGUAGE_NONE][0]['currency_code'];
     $price           = $shipping_item->commerce_total[LANGUAGE_NONE][0]['amount'] / 100;
     $line_output[]   = t(
-      '@line_item_label (Qty: @quantity) : @currency@price',
+      '@line_item_label (Qty: @intquantity) : @currency@price',
       array(
         '@line_item_label' => $line_item_label,
+        '@intquantity'     => (int) floor($quantity),
         '@quantity'        => $quantity,
-        '@currency'        => $currency,
-        '@price'           => $price,
+        '@currency'        => commerce_currency_get_symbol($currency),
+        '@currencycode'    => $currency,
+        '@price'           => sprintf('%.2f', $price),
       )
     );
   }
